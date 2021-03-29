@@ -7,10 +7,37 @@ import {
   MapContainer,
   LayersControl
 } from "react-leaflet";
-import { useLeafletContext } from "@react-leaflet/core";
+import {
+  createElementHook,
+  createPathHook,
+  createLeafComponent
+} from "@react-leaflet/core";
 import { Typography } from "@material-ui/core";
 import L from "leaflet";
-import Square from "./Square";
+
+function getBounds(props) {
+  return L.latLng(props.center).toBounds(props.size);
+}
+
+function createSquare(props, context) {
+  return { instance: new L.Rectangle(getBounds(props), context) };
+}
+
+function updateSquare(instance, props, prevProps) {
+  if (props.center !== prevProps.center || props.size !== prevProps.size) {
+    instance.setBounds(getBounds(props));
+  }
+}
+
+const useSquareElement = createElementHook(createSquare, updateSquare);
+const useSquare = createPathHook(useSquareElement);
+
+// Following the previous changes, we can see that the Square component gets
+// very simple as all the logic is implemented in the useSquare hook. We can
+// replace it by the createLeafComponent function that implements similar logic:
+const Square = createLeafComponent(useSquare);
+// createLeafComponent also provides additional logic in order to make the Leaflet
+// element instance available using React's ref.
 
 const maps = {
   base: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
