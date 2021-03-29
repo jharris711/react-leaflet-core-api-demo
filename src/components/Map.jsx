@@ -10,7 +10,7 @@ import {
 import {
   createElementHook,
   createPathHook,
-  createContainerComponent
+  createPathComponent
 } from "@react-leaflet/core";
 import L from "leaflet";
 
@@ -18,15 +18,6 @@ function getBounds(props) {
   return L.latLng(props.center).toBounds(props.size);
 }
 
-// All the steps above focus on displaying the Square element only.
-// However, it is common for React Leaflet components to also have children
-// when possible. Our Square being a Leaflet layer, overlays such as Popup
-// and Tooltip could be attached to it.
-
-// In order to support these overlays, we need to update the createSquare
-// function to set the created layer as the context's overlayContainer. Note
-// that the context object returned must be a copy of the one provided in the
-// function arguments, the function must not mutate the provided context:
 function createSquare(props, context) {
   const instance = new L.Rectangle(getBounds(props));
   return { instance, context: { ...context, overlayContainer: instance } };
@@ -38,14 +29,23 @@ function updateSquare(instance, props, prevProps) {
   }
 }
 
-const useSquareElement = createElementHook(createSquare, updateSquare);
-const useSquare = createPathHook(useSquareElement);
+// Most of React Leaflet's APIs are React components abstracting the logic of creating
+// and interacting with Leaflet elements. The different hooks and factories exposed by
+// the core APIs implement various pieces of logic that need to be combined to create
+// components, and in some cases the same series of functions are used to create different
+// components.
 
-// We also need to replace the component factory by taking care of providing
-// the changed context and rendering the children, createContainerComponent:
-const Square = createContainerComponent(useSquare);
-// In addition to the createLeafComponent and createContainerComponent functions,
-// createOverlayComponent can be used to create overlays such as Popup and Tooltip.
+// In the previous step, we combine the following three functions to create the component:
+
+// const useSquareElement = createElementHook(createSquare, updateSquare)
+// const useSquare = createPathHook(useSquareElement)
+// const Square = createContainerComponent(useSquare)
+
+// This logic is similar for other types of layers and is therefore provided as a
+// higher-level component factory, createPathComponent, as used below:
+const Square = createPathComponent(createSquare, updateSquare);
+// The core APIs export other high-level component factories that can be used in a
+// similar way
 
 const maps = {
   base: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
