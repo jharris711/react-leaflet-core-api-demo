@@ -3,24 +3,33 @@ import {
   useMap,
   TileLayer,
   LayerGroup,
-  ZoomControl,
+  Popup,
   MapContainer,
   LayersControl
 } from "react-leaflet";
 import {
   createElementHook,
   createPathHook,
-  createLeafComponent
+  createContainerComponent
 } from "@react-leaflet/core";
-import { Typography } from "@material-ui/core";
 import L from "leaflet";
 
 function getBounds(props) {
   return L.latLng(props.center).toBounds(props.size);
 }
 
+// All the steps above focus on displaying the Square element only.
+// However, it is common for React Leaflet components to also have children
+// when possible. Our Square being a Leaflet layer, overlays such as Popup
+// and Tooltip could be attached to it.
+
+// In order to support these overlays, we need to update the createSquare
+// function to set the created layer as the context's overlayContainer. Note
+// that the context object returned must be a copy of the one provided in the
+// function arguments, the function must not mutate the provided context:
 function createSquare(props, context) {
-  return { instance: new L.Rectangle(getBounds(props), context) };
+  const instance = new L.Rectangle(getBounds(props));
+  return { instance, context: { ...context, overlayContainer: instance } };
 }
 
 function updateSquare(instance, props, prevProps) {
@@ -32,12 +41,11 @@ function updateSquare(instance, props, prevProps) {
 const useSquareElement = createElementHook(createSquare, updateSquare);
 const useSquare = createPathHook(useSquareElement);
 
-// Following the previous changes, we can see that the Square component gets
-// very simple as all the logic is implemented in the useSquare hook. We can
-// replace it by the createLeafComponent function that implements similar logic:
-const Square = createLeafComponent(useSquare);
-// createLeafComponent also provides additional logic in order to make the Leaflet
-// element instance available using React's ref.
+// We also need to replace the component factory by taking care of providing
+// the changed context and rendering the children, createContainerComponent:
+const Square = createContainerComponent(useSquare);
+// In addition to the createLeafComponent and createContainerComponent functions,
+// createOverlayComponent can be used to create overlays such as Popup and Tooltip.
 
 const maps = {
   base: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -66,7 +74,9 @@ const Map = () => {
           </LayersControl.BaseLayer>
           <LayersControl.Overlay checked name="Square">
             <LayerGroup>
-              <Square center={center} size={1000} />
+              <Square center={center} size={1000}>
+                <Popup>Hello Popup!</Popup>
+              </Square>
             </LayerGroup>
           </LayersControl.Overlay>
         </LayersControl>
