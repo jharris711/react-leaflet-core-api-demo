@@ -3,7 +3,8 @@ import L from "leaflet";
 import {
   useLeafletContext,
   createElementHook,
-  useLayerLifecycle
+  useLayerLifecycle,
+  createPathHook
 } from "@react-leaflet/core";
 
 function getBounds(props) {
@@ -21,15 +22,15 @@ function updateSquare(instancem, props, prevProps) {
 }
 
 const useSquareElement = createElementHook(createSquare, updateSquare);
-
+// The core APIs also provide higher-level factory functions implementing logic
+// shared by different hooks, such as createPathHook. Here we can extract the
+// logic previously implemented in the component to a hook factory, and simply
+// call the created hook in the component:
+const useSquare = createPathHook(useSquareElement);
+// createPathHook also implements further logic, notably calling the useEventHandlers
+// and useLayerLifecycle hooks as well.
 const Square = props => {
-  const context = useLeafletContext();
-  const elementRef = useSquareElement(props, context);
-
-  // The core APIs provide additional hooks to handle specific pieces of
-  // logic. Here, we can replace the useEffect hook used previously to add
-  // and remove the layer by the useLayerLifecycle hook:
-  useLayerLifecycle(elementRef.current, context);
+  useSquare(props);
 
   return null;
 };
